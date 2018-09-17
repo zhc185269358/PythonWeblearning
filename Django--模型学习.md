@@ -154,6 +154,8 @@ class Ox(models.Model):
 
 ```
 
+##### Meta元数据类的其中一个属性:abstract 当设置为True时,这个模型类就不会创建数据表,而是作为基类供其他子类继承以提供信息
+
 ##### 模型的元数据:是指任何不是字段的数据 比如:排序选项,数据库表名,具体的Meta完整列表可以参看[Meta模型选项参考](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/ref/models/options.html).
 
 
@@ -165,4 +167,89 @@ class Ox(models.Model):
 ## 模型方法
 
 #### 可以在模型上定义自定义的方法来给你的对象添加自定义的“底层”功能。 [`Manager`](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/topics/db/managers.html#django.db.models.Manager) 方法用于“表范围”的事务，模型的方法应该着眼于特定的模型实例。
+
+###### 这是一个非常有价值的技术,让业务逻辑位于同一个地方--模型中
+
+- [`__str__()`](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/ref/models/instances.html#django.db.models.Model.__str__)  (python3)
+
+  一个python3的魔法函数,返回对象的unicode格式表示,当模型实例需要强制转换并显示为普通的字符串时，Python 和Django 将使用这个方法。 最明显是在交互式控制台或者管理站点显示一个对象的时候。
+
+- [`get_absolute_url()`](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/ref/models/instances.html#django.db.models.Model.get_absolute_url) 
+
+  - 它告诉Django 如何计算一个对象的URL。 Django 在它的管理站点中使用到这个方法，在其它任何需要计算一个对象的URL 时也将用到。
+  - 任何具有唯一标识自己的URL 的对象都应该定义这个方法。
+
+
+
+# 模型继承
+
+#### 记住一点,任何编写的自定义类,只要不是要继承另外的自定义类,那么都必须继承[`django.db.models.Model`](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/ref/models/instances.html#django.db.models.Model)类
+
+#### 我们在编写模型时,需要做的决策是想让我们的父类具有自己的数据表,还是只想作为基类提供一些通用方法来减少重用代码
+
+#### Django中有三种风格的继承:
+
+- ##### 通常,我们只想使用父类来持有一些信息,不想在每一个子模型中都敲一遍.这个类永远不会被单独使用,这时我们需要使用`抽象基类 `.
+
+- ##### 如果我们想继承一个已经存在的模型,且想让每个模型具有自己的数据库表,那么应该使用的是多表继承
+
+- ##### 如果想改变一个模块python级别的行为,而不用修改模型字段,使用代理模型
+
+
+
+## 抽象基类
+
+#### 编写完基类之后，在 [Meta](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/topics/db/models.html#meta-options)类中设置 `abstract=True` ， 这个模型就不会被用来创建任何数据表。 取而代之的是，当它被用来作为一个其他model的基类时，它的字段将被加入那些子类中。 如果抽象基类和它的子类有相同的字段名，那么将会出现error（并且Django将抛出一个exception）。
+
+```python
+from django.db import models
+
+class CommonInfo(models.Model):
+    name = models.CharField(max_length=100)
+    age = models.PositiveIntegerField()
+
+    class Meta:
+        abstract = True
+
+class Student(CommonInfo):
+    home_group = models.CharField(max_length=5)
+
+```
+
+#### `Meta继承`
+
+##### 当一个抽象基类被创建的时候, Django把你在基类内部定义的 [Meta](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/topics/db/models.html#meta-options) 类作为一个属性使其可用。 如果子类没有声明自己的[Meta](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/topics/db/models.html#meta-options)类, 它将会继承父类的[Meta](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/topics/db/models.html#meta-options)。 如果子类想要扩展父类的[Meta](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/topics/db/models.html#meta-options)类，它可以子类化它。
+
+```python
+from django.db import models
+
+class CommonInfo(models.Model):
+    # ...
+    class Meta:
+        abstract = True
+        ordering = ['name']
+
+class Student(CommonInfo):
+    # ...
+    class Meta(CommonInfo.Meta):
+        db_table = 'student_info'
+```
+
+
+
+## 多表继承
+
+##### 	这是 Django 支持的第二种继承方式。使用这种继承方式时，每一个层级下的每个 model 都是一个真正意义上完整的 model 。 每个 model 都有专属的数据表，都可以查询和创建数据表。 继承关系在子 model 和它的每个父类之间都添加一个链接 (通过一个自动创建的 [`OneToOneField`](https://yiyibooks.cn/__trs__/xx/Django_1.11.6/ref/models/fields.html#django.db.models.OneToOneField)来实现)。
+
+```python
+from django.db import models
+
+class Place(models.Model):
+    name = models.CharField(max_length=50)
+    address = models.CharField(max_length=80)
+
+class Restaurant(Place):
+    serves_hot_dogs = models.BooleanField(default=False)
+    serves_pizza = models.BooleanField(default=False)
+```
 
