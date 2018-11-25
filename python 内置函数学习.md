@@ -6,7 +6,7 @@ enumerate()函数,用于将一个`可遍历的`数据对象(列表,元组或字�
 
 enumerate(sequence,[start=0])函数有两个参数:
 
-- sequence 一个序列,迭代器或者刻碟带对象
+- sequence 一个序列,迭代器或者可迭代对象
 - start 下标的起始位置
 
 ##### 返回值
